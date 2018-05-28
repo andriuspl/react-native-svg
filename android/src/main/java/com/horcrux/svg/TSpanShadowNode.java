@@ -20,7 +20,6 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.os.Build;
-import android.support.v4.graphics.PaintCompat;
 
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.uimanager.ReactShadowNode;
@@ -84,8 +83,6 @@ class TSpanShadowNode extends TextShadowNode {
         pushGlyphContext();
         mCache = getLinePath(mContent, paint, canvas);
         popGlyphContext();
-
-        mCache.computeBounds(new RectF(), true);
 
         return mCache;
     }
@@ -499,10 +496,10 @@ class TSpanShadowNode extends TextShadowNode {
             Neither 'text-before-edge' nor 'text-after-edge' should be used with the vertical-align property.
         */
         final Paint.FontMetrics fm = paint.getFontMetrics();
-        final double top = -fm.top;
-        final double bottom = fm.bottom;
-        final double ascenderHeight = -fm.ascent;
         final double descenderDepth = fm.descent;
+        final double bottom = descenderDepth + fm.leading;
+        final double ascenderHeight = -fm.ascent + fm.leading;
+        final double top = -fm.top;
         final double totalHeight = top + bottom;
         double baselineShift = 0;
         String baselineShiftString = getBaselineShift();
@@ -593,6 +590,7 @@ class TSpanShadowNode extends TextShadowNode {
                     baselineShift = top;
                     break;
             }
+        }
         /*
         2.2.2. Alignment Shift: baseline-shift longhand
 
@@ -621,52 +619,51 @@ class TSpanShadowNode extends TextShadowNode {
 
         https://www.w3.org/TR/css-inline-3/#propdef-baseline-shift
         */
-            if (baselineShiftString != null) {
-                switch (baseline) {
-                    case top:
-                    case bottom:
-                        break;
+        if (baselineShiftString != null && !baselineShiftString.isEmpty()) {
+            switch (baseline) {
+                case top:
+                case bottom:
+                    break;
 
-                    default:
-                        switch (baselineShiftString) {
-                            case "sub":
-                                // TODO
-                                if (fontData != null && fontData.hasKey("tables") && fontData.hasKey("unitsPerEm")) {
-                                    int unitsPerEm = fontData.getInt("unitsPerEm");
-                                    ReadableMap tables = fontData.getMap("tables");
-                                    if (tables.hasKey("os2")) {
-                                        ReadableMap os2 = tables.getMap("os2");
-                                        if (os2.hasKey("ySubscriptYOffset")) {
-                                            double subOffset = os2.getDouble("ySubscriptYOffset");
-                                            baselineShift += fontSize * subOffset / unitsPerEm;
-                                        }
+                default:
+                    switch (baselineShiftString) {
+                        case "sub":
+                            // TODO
+                            if (fontData != null && fontData.hasKey("tables") && fontData.hasKey("unitsPerEm")) {
+                                int unitsPerEm = fontData.getInt("unitsPerEm");
+                                ReadableMap tables = fontData.getMap("tables");
+                                if (tables.hasKey("os2")) {
+                                    ReadableMap os2 = tables.getMap("os2");
+                                    if (os2.hasKey("ySubscriptYOffset")) {
+                                        double subOffset = os2.getDouble("ySubscriptYOffset");
+                                        baselineShift += mScale * fontSize * subOffset / unitsPerEm;
                                     }
                                 }
-                                break;
+                            }
+                            break;
 
-                            case "super":
-                                // TODO
-                                if (fontData != null && fontData.hasKey("tables") && fontData.hasKey("unitsPerEm")) {
-                                    int unitsPerEm = fontData.getInt("unitsPerEm");
-                                    ReadableMap tables = fontData.getMap("tables");
-                                    if (tables.hasKey("os2")) {
-                                        ReadableMap os2 = tables.getMap("os2");
-                                        if (os2.hasKey("ySuperscriptYOffset")) {
-                                            double superOffset = os2.getDouble("ySuperscriptYOffset");
-                                            baselineShift -= fontSize * superOffset / unitsPerEm;
-                                        }
+                        case "super":
+                            // TODO
+                            if (fontData != null && fontData.hasKey("tables") && fontData.hasKey("unitsPerEm")) {
+                                int unitsPerEm = fontData.getInt("unitsPerEm");
+                                ReadableMap tables = fontData.getMap("tables");
+                                if (tables.hasKey("os2")) {
+                                    ReadableMap os2 = tables.getMap("os2");
+                                    if (os2.hasKey("ySuperscriptYOffset")) {
+                                        double superOffset = os2.getDouble("ySuperscriptYOffset");
+                                        baselineShift -= mScale * fontSize * superOffset / unitsPerEm;
                                     }
                                 }
-                                break;
+                            }
+                            break;
 
-                            case "baseline":
-                                break;
+                        case "baseline":
+                            break;
 
-                            default:
-                                baselineShift -= PropHelper.fromRelative(baselineShiftString, fontSize, 0, mScale, fontSize);
-                        }
-                        break;
-                }
+                        default:
+                            baselineShift -= PropHelper.fromRelative(baselineShiftString, mScale * fontSize, 0, mScale, fontSize);
+                    }
+                    break;
             }
         }
 
@@ -726,7 +723,7 @@ class TSpanShadowNode extends TextShadowNode {
             double spacing = wordSpace + letterSpacing;
             double advance = charWidth + spacing;
 
-            double x = gc.nextX(kerning + advance);
+            double x = gc.nextX(alreadyRenderedGraphemeCluster ? 0 : kerning + advance);
             double y = gc.nextY();
             double dx = gc.nextDeltaX();
             double dy = gc.nextDeltaY();

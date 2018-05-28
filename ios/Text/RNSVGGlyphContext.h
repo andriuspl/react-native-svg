@@ -1,12 +1,12 @@
 #import <React/UIView+React.h>
 #import <CoreText/CoreText.h>
-#import "FontData.h"
+#import "RNSVGFontData.h"
 
 @class RNSVGText;
 @class RNSVGGroup;
-@class GlyphContext;
+@class RNSVGGlyphContext;
 
-@interface GlyphContext : NSObject
+@interface RNSVGGlyphContext : NSObject
 
 - (CTFontRef)getGlyphFont;
 
@@ -14,7 +14,7 @@
                         width:(float)width
                        height:(float)height;
 
-- (FontData *)getFont;
+- (RNSVGFontData *)getFont;
 
 - (double)getFontSize;
 
@@ -34,8 +34,7 @@
 
 - (void)popContext;
 
-- (void)pushContextwithRNSVGText:(RNSVGText *)node
-                           reset:(bool)reset
+- (void)pushContext:(RNSVGText *)node
                             font:(NSDictionary *)font
                                x:(NSArray*)x
                                y:(NSArray*)y
@@ -43,7 +42,7 @@
                           deltaY:(NSArray*)deltaY
                           rotate:(NSArray*)rotate;
 
-- (void)pushContextWithRNSVGGroup:(RNSVGGroup*)node
+- (void)pushContext:(RNSVGGroup*)node
                              font:(NSDictionary *)font;
 
 

@@ -10,22 +10,22 @@
 #import "RNSVGTextPath.h"
 #import <React/RCTFont.h>
 #import <CoreText/CoreText.h>
-#import "GlyphContext.h"
+#import "RNSVGGlyphContext.h"
+#import "RNSVGTextProperties.h"
 
 @implementation RNSVGText
 {
-    RNSVGText *_textRoot;
-    GlyphContext *_glyphContext;
+    RNSVGGlyphContext *_glyphContext;
 }
 
-- (void)renderLayerTo:(CGContextRef)context
+- (void)renderLayerTo:(CGContextRef)context rect:(CGRect)rect
 {
     [self clip:context];
     CGContextSaveGState(context);
     [self setupGlyphContext:context];
 
     CGPathRef path = [self getGroupPath:context];
-    [self renderGroupTo:context];
+    [self renderGroupTo:context rect:rect];
     [self releaseCachedPath];
     CGContextRestoreGState(context);
 
@@ -36,8 +36,8 @@
 
 - (void)setupGlyphContext:(CGContextRef)context
 {
-    _glyphContext = [[GlyphContext alloc] initWithScale:1 width:[self getContextWidth]
-                                                 height:[self getContextHeight]];
+    _glyphContext = [[RNSVGGlyphContext alloc] initWithScale:1 width:[self getContextWidth]
+                                                   height:[self getContextHeight]];
 }
 
 // release the cached CGPathRef for RNSVGTSpan
@@ -68,54 +68,102 @@
     return (CGPathRef)CFAutorelease(CGPathCreateCopyByTransformingPath(groupPath, &CGAffineTransformIdentity));
 }
 
-- (void)renderGroupTo:(CGContextRef)context
+- (void)renderGroupTo:(CGContextRef)context rect:(CGRect)rect
 {
     [self pushGlyphContext];
-    [super renderGroupTo:context];
+    [super renderGroupTo:context rect:rect];
     [self popGlyphContext];
 }
 
-- (RNSVGText *)getTextRoot
+// TODO: Optimisation required
+- (RNSVGText *)textRoot
 {
-    if (!_textRoot) {
-        _textRoot = self;
-        while (_textRoot && [_textRoot class] != [RNSVGText class]) {
-            if (![_textRoot isKindOfClass:[RNSVGText class]]) {
-                //todo: throw exception here
-                break;
-            }
-            _textRoot = (RNSVGText*)[_textRoot superview];
+    RNSVGText *root = self;
+    while (root && [root class] != [RNSVGText class]) {
+        if (![root isKindOfClass:[RNSVGText class]]) {
+            //todo: throw exception here
+            break;
         }
+        root = (RNSVGText*)[root superview];
     }
 
-    return _textRoot;
+    return root;
 }
 
-- (GlyphContext *)getGlyphContext
+- (NSString *)alignmentBaseline
+{
+    if (_alignmentBaseline != nil) {
+        return _alignmentBaseline;
+    }
+    
+    UIView* parent = self.superview;
+    while (parent != nil) {
+        if ([parent isKindOfClass:[RNSVGText class]]) {
+            RNSVGText* node = (RNSVGText*)parent;
+            NSString* baseline = node.alignmentBaseline;
+            if (baseline != nil) {
+                _alignmentBaseline = baseline;
+                return baseline;
+            }
+        }
+        parent = [parent superview];
+    }
+    
+    if (_alignmentBaseline == nil) {
+        _alignmentBaseline = RNSVGAlignmentBaselineStrings[0];
+    }
+    return _alignmentBaseline;
+}
+
+- (NSString *)baselineShift
+{
+    if (_baselineShift != nil) {
+        return _baselineShift;
+    }
+    
+    UIView* parent = [self superview];
+    while (parent != nil) {
+        if ([parent isKindOfClass:[RNSVGText class]]) {
+            RNSVGText* node = (RNSVGText*)parent;
+            NSString* baselineShift = node.baselineShift;
+            if (baselineShift != nil) {
+                _baselineShift = baselineShift;
+                return baselineShift;
+            }
+        }
+        parent = [parent superview];
+    }
+    
+    // set default value
+    _baselineShift = @"";
+    
+    return _baselineShift;
+}
+
+- (RNSVGGlyphContext *)getGlyphContext
 {
     return _glyphContext;
 }
 
 - (void)pushGlyphContext
 {
-    [[[self getTextRoot] getGlyphContext] pushContextwithRNSVGText:self
-                                                             reset:false
-                                                              font:self.font
-                                                                 x:self.positionX
-                                                                 y:self.positionY
-                                                            deltaX:self.deltaX
-                                                            deltaY:self.deltaY
-                                                            rotate:self.rotate];
+    [[self.textRoot getGlyphContext] pushContext:self
+                                            font:self.font
+                                               x:self.positionX
+                                               y:self.positionY
+                                          deltaX:self.deltaX
+                                          deltaY:self.deltaY
+                                          rotate:self.rotate];
 }
 
 - (void)popGlyphContext
 {
-    [[[self getTextRoot] getGlyphContext] popContext];
+    [[self.textRoot getGlyphContext] popContext];
 }
 
 - (CTFontRef)getFontFromContext
 {
-    return [[[self getTextRoot] getGlyphContext] getGlyphFont];
+    return [[self.textRoot getGlyphContext] getGlyphFont];
 }
 
 @end
