@@ -923,17 +923,6 @@ class TSpanShadowNode extends TextShadowNode {
             }
         }
 
-
-
-        if (fontStyle == Typeface.NORMAL) {
-             paint.setTypeface(Typeface.createFromAsset(getThemedContext().getAssets(),"fonts/"+fontFamily+".ttf"));
-        } else {
-             paint.setTypeface(Typeface.createFromAsset(getThemedContext().getAssets(),
-                     "fonts/"+fontFamily+"-"+font.fontStyle+".ttf"));
-        }
-
-
-
         paint.setTextSize((float) fontSize);
         paint.setTextAlign(Paint.Align.LEFT);
 
