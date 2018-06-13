@@ -926,11 +926,11 @@ class TSpanShadowNode extends TextShadowNode {
 
 
         if (fontStyle == Typeface.NORMAL) {
-                         paint.setTypeface(Typeface.createFromAsset(getThemedContext().getAssets(),"fonts/"+font.getString(PROP_FONT_FAMILY)+".ttf"));
-                     } else {
-                         paint.setTypeface(Typeface.createFromAsset(getThemedContext().getAssets(),
-                                 "fonts/"+font.getString(PROP_FONT_FAMILY)+"-"+font.getString(PROP_FONT_STYLE)+".ttf"));
-                    }
+             paint.setTypeface(Typeface.createFromAsset(getThemedContext().getAssets(),"fonts/"+fontFamily+".ttf"));
+        } else {
+             paint.setTypeface(Typeface.createFromAsset(getThemedContext().getAssets(),
+                     "fonts/"+fontFamily+"-"+font.fontStyle+".ttf"));
+        }
 
 
 
